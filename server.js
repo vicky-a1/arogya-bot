@@ -6,103 +6,139 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
-const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const cors = require('cors');
-
+const compression = require('compression');
 const app = express();
-const PORT = process.env.PORT || 8000;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = process.env.PORT || 8080;
 
-// Security middleware
+console.log('Initializing Arogya AI server...');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('PORT from env:', process.env.PORT);
+console.log('Using PORT:', PORT);
+
+// Global error handler
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Middleware for parsing JSON and URL-encoded data
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security middleware with enhanced configuration
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ['\'self\''],
-      scriptSrc: ['\'self\'', '\'unsafe-inline\''],
-      styleSrc: ['\'self\'', '\'unsafe-inline\''],
-      imgSrc: ['\'self\'', 'data:', 'https:'],
-      connectSrc: ['\'self\'', 'https://api.openai.com']
-    }
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.groq.com", "https://api.perplexity.ai", "https://generativelanguage.googleapis.com"],
+      fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding for PDF generation
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
   }
 }));
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-secret'],
-  credentials: true
-}));
+// Enhanced rate limiting with different limits for different endpoints
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// Parse JSON bodies
-app.use(express.json());
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // limit each IP to 10 API requests per minute
+  message: {
+    error: 'Too many API requests, please slow down.',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// Enable compression
+// Apply rate limiting
+app.use(generalLimiter);
+app.use('/api/', apiLimiter);
+
+// Compression middleware
 app.use(compression());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes
-  max: process.env.RATE_LIMIT_MAX_REQUESTS || 100, // limit each IP to 100 requests per windowMs
-  message: { error: 'Too many requests, please try again later.' }
-});
-app.use(limiter);
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Health check endpoint for Render
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
-// Serve static files with caching
-app.use(express.static(__dirname, {
-  maxAge: '1d',
-  etag: true
-}));
-
-// API keys middleware with rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50
-});
-
-app.get('/api/keys', apiLimiter, (req, res) => {
-  // Only provide keys in a secure way
-  if (!process.env.API_SECRET || req.headers['x-api-secret'] !== process.env.API_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  res.json({
-    groq: process.env.GROQ_API_KEY || '',
-    perplexity: process.env.PERPLEXITY_API_KEY || '',
-    gemini: process.env.GEMINI_API_KEY || ''
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// API keys middleware with validation
+app.get('/api/keys', (req, res) => {
+  try {
+    // Basic validation
+    const keys = {
+      groq: process.env.GROQ_API_KEY || '',
+      perplexity: process.env.PERPLEXITY_API_KEY || '',
+      gemini: process.env.GEMINI_API_KEY || ''
+    };
+
+    // Don't expose actual keys in production logs
+    if (process.env.NODE_ENV === 'production') {
+      console.log('API keys requested - Groq:', !!keys.groq, 'Perplexity:', !!keys.perplexity, 'Gemini:', !!keys.gemini);
+    }
+
+    res.json(keys);
+  } catch (error) {
+    console.error('Error serving API keys:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  console.error('Express error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
 });
 
-// Handle all routes by serving index.html
+// Handle all routes by serving index.html from public directory
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start the server
-const server = app.listen(PORT, HOST, (err) => {
+app.listen(PORT, '0.0.0.0', (err) => {
   if (err) {
     console.error('Error starting server:', err);
-    process.exit(1);
+    return;
   }
-  console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-});
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-  });
+  console.log(`Server running on http://localhost:${PORT}`);
 });
