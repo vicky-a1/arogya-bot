@@ -15,15 +15,37 @@ const PORT = process.env.PORT || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ['\'self\''],
+      scriptSrc: ['\'self\'', '\'unsafe-inline\''],
+      styleSrc: ['\'self\'', '\'unsafe-inline\''],
+      imgSrc: ['\'self\'', 'data:', 'https:'],
+      connectSrc: ['\'self\'', 'https://api.openai.com']
+    }
+  }
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-secret'],
+  credentials: true
+}));
+
+// Parse JSON bodies
+app.use(express.json());
 
 // Enable compression
 app.use(compression());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes
+  max: process.env.RATE_LIMIT_MAX_REQUESTS || 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' }
 });
 app.use(limiter);
 
