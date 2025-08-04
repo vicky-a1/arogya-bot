@@ -27,8 +27,28 @@
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vicky-a1/arogya-bot.git"
+  },
+  "homepage": "https://github.com/vicky-a1/arogya-bot#readme",
+  "bugs": {
+    "url": "https://github.com/vicky-a1/arogya-bot/issues"
+  },
+  "keywords": [
+    "ai",
+    "healthcare",
+    "medical",
+    "diagnosis",
+    "chatbot",
+    "groq",
+    "perplexity",
+    "gemini",
+    "indian-healthcare",
+    "telemedicine"
+  ],
+  "author": "Vicky A1 <vicky.a1@example.com>",
   "license": "MIT"
 }

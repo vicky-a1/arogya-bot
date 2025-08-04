@@ -72,6 +72,87 @@ The application supports multiple AI providers with automatic fallback:
 
 **Note**: At least one API key is required, but having all three provides maximum reliability.
 
+## 🚀 Deployment Options
+
+### Option 1: Vercel (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vicky-a1/arogya-bot)
+
+1. Click the deploy button above
+2. Connect your GitHub account
+3. Add environment variables in Vercel dashboard:
+   - `GROQ_API_KEY`
+   - `PERPLEXITY_API_KEY`
+   - `GEMINI_API_KEY`
+4. Deploy automatically
+
+### Option 2: Railway
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/arogya-ai)
+
+1. Click deploy button
+2. Connect GitHub repository
+3. Add environment variables in Railway dashboard
+4. Deploy with one click
+
+### Option 3: Render
+1. Fork this repository
+2. Create new Web Service on Render
+3. Connect your forked repository
+4. Add environment variables
+5. Deploy
+
+### Option 4: Docker
+```bash
+# Clone repository
+git clone https://github.com/vicky-a1/arogya-bot.git
+cd arogya-bot
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run with Docker Compose
+docker-compose up -d
+```
+
+### Option 5: Manual Deployment
+```bash
+# Clone and setup
+git clone https://github.com/vicky-a1/arogya-bot.git
+cd arogya-bot
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start application
+npm start
+```
+
+## 🔧 Environment Variables
+
+| Variable | Required | Description | Where to get |
+|----------|----------|-------------|--------------|
+| `GROQ_API_KEY` | Yes* | Primary AI provider | [console.groq.com](https://console.groq.com/) |
+| `PERPLEXITY_API_KEY` | No | Fallback AI provider | [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) |
+| `GEMINI_API_KEY` | No | Fallback AI provider | [makersuite.google.com](https://makersuite.google.com/app/apikey) |
+| `NODE_ENV` | No | Environment mode | `production` or `development` |
+| `PORT` | No | Server port | Default: `3000` |
+
+*At least one AI provider API key is required
+
+## 📊 Features Overview
+
+- ✅ **Multi-AI Provider Support** with automatic failover
+- ✅ **5 Groq Models** with intelligent fallback
+- ✅ **Emergency Detection** with real-time alerts
+- ✅ **PDF Report Generation** for medical assessments
+- ✅ **Multi-language Support** (English, Hindi, Marathi, Kannada)
+- ✅ **Production Security** with rate limiting and input validation
+- ✅ **Health Monitoring** with `/api/health` endpoint
+- ✅ **Docker Support** for containerized deployment
+- ✅ **Zero Downtime** architecture with comprehensive error handling
+
 ## 🌐 Live Demo
 
 🚀 **Try Arogya AI Live**: [https://arogya-bot.vercel.app](https://arogya-bot.vercel.app)
