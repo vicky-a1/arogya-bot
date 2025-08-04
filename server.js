@@ -12,6 +12,7 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Security middleware
 app.use(helmet());
@@ -68,10 +69,18 @@ app.get('*', (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, '0.0.0.0', (err) => {
+const server = app.listen(PORT, HOST, (err) => {
   if (err) {
     console.error('Error starting server:', err);
-    return;
+    process.exit(1);
   }
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+  });
 });
